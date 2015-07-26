@@ -78,8 +78,9 @@ class TestFile(object):
 
 
 class TDMSTestClass(unittest.TestCase):
-    def setUp(self):
+    def setUp(self, implementation):
         logging.getLogger(tdms.__name__).setLevel(logging.DEBUG)
+        self.implementation = implementation
 
     def basic_segment(self):
         """Basic TDMS segment with one group and two channels"""
@@ -170,12 +171,12 @@ class TDMSTestClass(unittest.TestCase):
         )
         return (metadata, data, toc)
 
-    def test_data_read(self):
+    def check_data_read(self):
         """Test reading data"""
 
         test_file = TestFile()
         test_file.add_segment(*self.basic_segment())
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 2)
@@ -186,17 +187,17 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(data[0], 3)
         self.assertEqual(data[1], 4)
 
-    def test_property_read(self):
+    def check_property_read(self):
         """Test reading an object property"""
 
         test_file = TestFile()
         test_file.add_segment(*self.basic_segment())
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         object = tdmsData.object("Group")
         self.assertEqual(object.property("num"), 10)
 
-    def test_no_metadata_segment(self):
+    def check_no_metadata_segment(self):
         """Add a segment with two channels, then a second
         segment with the same metadata as before,
         so there is only the lead in and binary data"""
@@ -211,7 +212,7 @@ class TDMSTestClass(unittest.TestCase):
         )
         toc = ("kTocRawData")
         test_file.add_segment('', data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
@@ -220,7 +221,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 4)
         self.assertTrue(all(data == [3, 4, 7, 8]))
 
-    def test_no_metadata_object(self):
+    def check_no_metadata_object(self):
         """Re-use an object without setting any new metadata and
         re-using the data structure"""
 
@@ -271,7 +272,7 @@ class TDMSTestClass(unittest.TestCase):
             # Number of properties
             "00 00 00 00")
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
@@ -280,7 +281,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 4)
         self.assertTrue(all(data == [3, 4, 7, 8]))
 
-    def test_new_channel(self):
+    def check_new_channel(self):
         """Add a new voltage channel, with the other two channels
         remaining unchanged, so only the new channel is in metadata section"""
 
@@ -315,7 +316,7 @@ class TDMSTestClass(unittest.TestCase):
             "0A 00 00 00"
         )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
@@ -327,7 +328,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [9, 10]))
 
-    def test_larger_channel(self):
+    def check_larger_channel(self):
         """In the second segment, increase the channel size
         of one channel"""
 
@@ -362,7 +363,7 @@ class TDMSTestClass(unittest.TestCase):
             "0A 00 00 00"
         )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
         self.assertTrue(all(data == [1, 2, 5, 6]))
@@ -370,7 +371,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 6)
         self.assertTrue(all(data == [3, 4, 7, 8, 9, 10]))
 
-    def test_remove_channel(self):
+    def check_remove_channel(self):
         """In the second segment, remove a channel.
         We need to write a new object list in this case"""
 
@@ -401,7 +402,7 @@ class TDMSTestClass(unittest.TestCase):
             "06 00 00 00"
         )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
         self.assertTrue(all(data == [1, 2, 5, 6]))
@@ -409,7 +410,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [3, 4]))
 
-    def test_no_lead_in(self):
+    def check_no_lead_in(self):
         """Add segment and then a repeated segment without
         any lead in or metadata, so data is read in chunks"""
 
@@ -422,7 +423,7 @@ class TDMSTestClass(unittest.TestCase):
             "08 00 00 00"
         )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 4)
@@ -431,14 +432,14 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 4)
         self.assertTrue(all(data == [3, 4, 7, 8]))
 
-    def test_interleaved(self):
+    def check_interleaved(self):
         """Test reading interleaved data"""
 
         test_file = TestFile()
         (metadata, data, toc) = self.basic_segment()
         toc = toc + ("kTocInterleavedData", )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 2)
@@ -449,7 +450,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(data[0], 2)
         self.assertEqual(data[1], 4)
 
-    def test_timestamp_data(self):
+    def check_timestamp_data(self):
         """Test reading contiguous and interleaved timestamp data,
         which isn't read by numpy"""
 
@@ -522,7 +523,7 @@ class TDMSTestClass(unittest.TestCase):
         test_file = TestFile()
         toc = ("kTocMetaData", "kTocRawData", "kTocNewObjList")
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         channel_data = tdmsData.channel_data("Group", "TimeChannel1")
         self.assertEqual(len(channel_data), 2)
         assertTimeEqual(channel_data[0], times[0])
@@ -537,7 +538,7 @@ class TDMSTestClass(unittest.TestCase):
         toc = toc + ("kTocInterleavedData", )
         test_file = TestFile()
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         channel_data = tdmsData.channel_data("Group", "TimeChannel1")
         self.assertEqual(len(channel_data), 2)
         assertTimeEqual(channel_data[0], times[0])
@@ -547,13 +548,13 @@ class TDMSTestClass(unittest.TestCase):
         assertTimeEqual(channel_data[0], times[1])
         assertTimeEqual(channel_data[1], times[3])
 
-    def test_time_track(self):
+    def check_time_track(self):
         """Add a time track to waveform data"""
 
         test_file = TestFile()
         (metadata, data, toc) = self.basic_segment()
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         obj = tdmsData.object("Group", "Channel2")
         time = obj.time_track()
@@ -562,7 +563,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertTrue(abs(time[0]) < epsilon)
         self.assertTrue(abs(time[1] - 0.1) < epsilon)
 
-    def test_no_data_section(self):
+    def check_no_data_section(self):
         """kTocRawData is set but data length is zero
 
         Keep first segment the same but add a second
@@ -608,7 +609,7 @@ class TDMSTestClass(unittest.TestCase):
             "00 00 00 00")
         data = ""
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [1, 2]))
@@ -616,7 +617,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [3, 4]))
 
-    def test_repeated_object_without_data(self):
+    def check_repeated_object_without_data(self):
         """Repeated objects with no data in new segment
 
         A new object is also added with new data in order
@@ -667,7 +668,7 @@ class TDMSTestClass(unittest.TestCase):
             "02 00 00 00"
         )
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [1, 2]))
@@ -678,12 +679,12 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertTrue(all(data == [1, 2]))
 
-    def test_memmapped_read(self):
+    def check_memmapped_read(self):
         """Test reading data into memmapped arrays"""
 
         test_file = TestFile()
         test_file.add_segment(*self.basic_segment())
-        tdmsData = test_file.load(memmap_dir=tempfile.gettempdir())
+        tdmsData = test_file.load(memmap_dir=tempfile.gettempdir(), implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "Channel1")
         self.assertEqual(len(data), 2)
@@ -694,7 +695,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(data[0], 3)
         self.assertEqual(data[1], 4)
 
-    def test_incomplete_data(self):
+    def check_incomplete_data(self):
         """Test incomplete last segment, eg. if LabView crashed"""
 
         test_file = TestFile()
@@ -702,7 +703,7 @@ class TDMSTestClass(unittest.TestCase):
         test_file.add_segment(metadata, data, toc)
         # Add second, incomplete segment
         test_file.add_segment(metadata, data, toc, incomplete=True)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         # Eventually we might want to attempt to read the data
         # from the incomplete segment, but for now just make
@@ -716,7 +717,7 @@ class TDMSTestClass(unittest.TestCase):
         self.assertEqual(data[0], 3)
         self.assertEqual(data[1], 4)
 
-    def test_string_data(self):
+    def check_string_data(self):
         """Test reading a file with string data"""
 
         strings = ["abcdefg", "qwertyuiop"]
@@ -751,14 +752,14 @@ class TDMSTestClass(unittest.TestCase):
         for string in strings:
             data += string_hexlify(string)
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         data = tdmsData.channel_data("Group", "StringChannel")
         self.assertEqual(len(data), len(strings))
         for expected, read in zip(strings, data):
             self.assertEqual(expected, read)
 
-    def test_slash_and_space_in_name(self):
+    def check_slash_and_space_in_name(self):
         """Test name like '01/02/03 something'"""
 
         group_1_name = "01/02/03 something"
@@ -812,7 +813,7 @@ class TDMSTestClass(unittest.TestCase):
         )
 
         test_file.add_segment(metadata, data, toc)
-        tdmsData = test_file.load()
+        tdmsData = test_file.load(implementation=self.implementation)
 
         self.assertEqual(len(tdmsData.groups()), 2)
         self.assertEqual(len(tdmsData.group_channels(group_1_name)), 1)
@@ -822,8 +823,34 @@ class TDMSTestClass(unittest.TestCase):
         data_2 = tdmsData.channel_data(group_2_name, channel_2_name)
         self.assertEqual(len(data_2), 2)
 
+# Proxy classes for testing both Python and CFFI
+
+class PyTDMSTestClass(TDMSTestClass):
+    def setUp(self):
+        super(PyTDMSTestClass, self).setUp("Python")
 
 
+class cTDMSTestClass(TDMSTestClass):
+    def setUp(self):
+        super(cTDMSTestClass, self).setUp("CFFI")
+
+def load_npTDMS_cases():
+    tl = unittest.TestLoader()
+    tl.testMethodPrefix = 'check'
+    for implementation in [PyTDMSTestClass, cTDMSTestClass]:
+        yield tl.loadTestsFromTestCase(implementation)
+
+# For nosetests. nosetests searches for tests
+# by checking whether the method name starts with
+# test.
+
+def test_npTMS():
+    tests = load_npTDMS_cases()
+    for test in tests:
+        yield test.debug
 
 if __name__ == '__main__':
-    unittest.main()
+    suite = unittest.TestSuite()
+    suite.addTests(load_npTDMS_cases())
+    unittest.TextTestRunner(verbosity=2).run(suite)
+

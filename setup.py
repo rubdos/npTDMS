@@ -1,7 +1,17 @@
 import os
 
-from setuptools import setup
+from setuptools import setup, Extension
 
+# Configure the C++ implementation
+
+extensions=[]
+install_requirements = ["numpy"]
+
+try:
+    from cnptdms import build
+    extensions = [build.ffi.distutils_extension()]
+except:
+    pass
 
 def read_version():
     here = os.path.abspath(os.path.dirname(__file__))
@@ -39,9 +49,10 @@ setup(
     'Intended Audience :: Science/Research',
     'Natural Language :: English',
   ],
-  install_requires = ['numpy'],
+  install_requires = install_requirements,
   entry_points = """
   [console_scripts]
   tdmsinfo=nptdms.tdmsinfo:main
-  """
+  """,
+  ext_modules=extensions
 )

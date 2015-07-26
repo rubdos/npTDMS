@@ -16,6 +16,9 @@ def main():
             '-d', '--debug', action="store_true",
             help="Print debugging information to stderr.")
     parser.add_argument(
+            '-c', '--cffi', action="store_true",
+            help="Use the experimental C++ CFFI as backend for reading tdms_file.")
+    parser.add_argument(
             'tdms_file',
             help="TDMS file to read.")
     args = parser.parse_args()
@@ -23,7 +26,10 @@ def main():
     if args.debug:
         logging.getLogger(tdms.__name__).setLevel(logging.DEBUG)
 
-    tdmsfile = tdms.TdmsFile(args.tdms_file)
+    if args.cffi:
+        tdmsfile = tdms.TdmsFile(args.tdms_file, implementation="CFFI")
+    else:
+        tdmsfile = tdms.TdmsFile(args.tdms_file)
 
     level = 0
     root = tdmsfile.object()

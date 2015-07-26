@@ -1,0 +1,3 @@
+[submodule "cnptdms/TDMSpp"]
+	path = cnptdms/TDMSpp
+	url = https://github.com/rubdos/TDMSpp.git
