@@ -3,6 +3,12 @@ box: adreeve/python-numpy
 build:
   steps:
     - script:
+        name: Init submodules
+        code: git submodule init
+    - script:
+        name: Download submodules
+        code: git submodule update
+    - script:
         name: Test on Python 2.7
         code: |
           python2.7 setup.py install
